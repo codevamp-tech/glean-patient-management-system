@@ -1,5 +1,7 @@
-import { mockPatients } from "@/lib/data"
 import { NextResponse } from "next/server"
+import dbConnect from "@/lib/dbConnect"
+import Patient from "@/lib/models/Patient"
+import { mockPatients } from "@/lib/data"
 
 export async function POST(request: Request) {
   try {
@@ -44,12 +46,14 @@ export async function POST(request: Request) {
 
     // Mock response for patient queries
     if (message.toLowerCase().includes("spine") || message.toLowerCase().includes("spine injury")) {
-      const spinePatients = mockPatients.filter(
-        (p) =>
-          p.diagnosis.toLowerCase().includes("spine") ||
-          p.diagnosis.toLowerCase().includes("disc") ||
-          p.diagnosis.toLowerCase().includes("cervical"),
-      )
+      await dbConnect()
+      const spinePatients = await Patient.find({
+        $or: [
+          { diagnosis: /spine/i },
+          { diagnosis: /disc/i },
+          { diagnosis: /cervical/i },
+        ],
+      }).lean()
 
       return NextResponse.json({
         query: message,

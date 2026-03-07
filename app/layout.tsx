@@ -10,18 +10,21 @@ const fontSans = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
+  preload: false,
 })
 
 const fontSerif = Libre_Baskerville({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-serif",
+  preload: false,
 })
 
 const fontMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-mono",
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -62,7 +65,7 @@ export default function RootLayout({
     <html lang="en" className="bg-background">
       <body className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} font-sans antialiased`}>
         <LayoutWrapper>{children}</LayoutWrapper>
-        <AIChatbot />
+        {/* <AIChatbot /> */}
         <Analytics />
       </body>
     </html>

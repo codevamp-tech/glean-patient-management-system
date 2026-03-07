@@ -1,36 +1,94 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Plus } from "lucide-react"
-import { mockPatients } from "@/lib/data"
+import { Search, Filter, Eye, ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { AddPatientDialog } from "@/components/add-patient-dialog"
+import { Patient } from "@/lib/data"
+import { cn } from "@/lib/utils"
 
 export default function PatientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [diagnosisFilter, setDiagnosisFilter] = useState("all")
-  const [reportTypeFilter, setReportTypeFilter] = useState("all")
+  const [doctorFilter, setDoctorFilter] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [doctorsList, setDoctorsList] = useState<any[]>([])
+  const [specialtiesList, setSpecialtiesList] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchData = async () => {
+    try {
+      const [pRes, dRes, sRes] = await Promise.all([
+        fetch("/api/patients"),
+        fetch("/api/doctors"),
+        fetch("/api/specialties")
+      ])
+      const [pData, dData, sData] = await Promise.all([
+        pRes.json(),
+        dRes.json(),
+        sRes.json()
+      ])
+      setPatients(Array.isArray(pData) ? pData : [])
+      setDoctorsList(Array.isArray(dData) ? dData : [])
+      setSpecialtiesList(Array.isArray(sData) ? sData : [])
+    } catch (error) {
+      console.error("Failed to fetch data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, diagnosisFilter, doctorFilter])
+
   // Filter patients
-  const filteredPatients = mockPatients.filter((patient) => {
+  const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.includes(searchTerm)
+      (patient.phone && patient.phone.includes(searchTerm))
 
     const matchesDiagnosis = diagnosisFilter === "all" || patient.diagnosis === diagnosisFilter
-    const matchesReportType = reportTypeFilter === "all" || patient.reportType === reportTypeFilter
+    const matchesDoctor = doctorFilter === "all" || patient.doctor === doctorFilter
 
-    return matchesSearch && matchesDiagnosis && matchesReportType
+    return matchesSearch && matchesDiagnosis && matchesDoctor
   })
+
+  const uniqueDoctors = doctorsList.map(d => d.name).filter(Boolean)
+  const uniqueDiagnoses = specialtiesList.map(s => s.name).filter(Boolean)
+
+  const getDiagnosisColor = (diagnosis: string | undefined) => {
+    if (!diagnosis) return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+    const colors = [
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20",
+      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20",
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
+      "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20",
+      "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-500/10 dark:text-pink-400 dark:border-pink-500/20",
+      "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20",
+      "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-400 dark:border-cyan-500/20"
+    ]
+    let hash = 0
+    for (let i = 0; i < diagnosis.length; i++) {
+      hash = diagnosis.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    return colors[Math.abs(hash) % colors.length]
+  }
 
   // Pagination
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage)
@@ -45,7 +103,7 @@ export default function PatientsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Patients</h1>
             <p className="mt-1 text-sm text-muted-foreground">Manage and view patient records</p>
           </div>
-          <AddPatientDialog>
+          <AddPatientDialog onSuccess={fetchData}>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Add Patient
@@ -70,38 +128,29 @@ export default function PatientsPage() {
               </div>
 
               {/* Filters */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Doctor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Doctors</SelectItem>
+                    {uniqueDoctors.map((doc: any) => (
+                      <SelectItem key={doc} value={doc}>{doc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={diagnosisFilter} onValueChange={setDiagnosisFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <Filter className="h-4 w-4 mr-2" />
+                  <SelectTrigger className="w-[160px]">
                     <SelectValue placeholder="Diagnosis" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Diagnoses</SelectItem>
-                    <SelectItem value="Knee Osteoarthritis">Knee Osteoarthritis</SelectItem>
-                    <SelectItem value="Lumbar Disc Herniation">Lumbar Disc Herniation</SelectItem>
-                    <SelectItem value="Rotator Cuff Tear">Rotator Cuff Tear</SelectItem>
-                    <SelectItem value="Cervical Spondylosis">Cervical Spondylosis</SelectItem>
-                    <SelectItem value="Ankle Fracture">Ankle Fracture</SelectItem>
-                    <SelectItem value="Meniscal Tear">Meniscal Tear</SelectItem>
-                    <SelectItem value="Tendinitis">Tendinitis</SelectItem>
-                    <SelectItem value="Hip Dysplasia">Hip Dysplasia</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={reportTypeFilter} onValueChange={setReportTypeFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Report Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="X-Ray">X-Ray</SelectItem>
-                    <SelectItem value="MRI">MRI</SelectItem>
-                    <SelectItem value="CT-Scan">CT-Scan</SelectItem>
-                    <SelectItem value="Ultrasound">Ultrasound</SelectItem>
-                    <SelectItem value="Physical Therapy">Physical Therapy</SelectItem>
-                    <SelectItem value="Surgical Notes">Surgical Notes</SelectItem>
-                    <SelectItem value="Prescription">Prescription</SelectItem>
+                    {uniqueDiagnoses.map((diag: any) => (
+                      <SelectItem key={diag} value={diag}>{diag}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -109,90 +158,100 @@ export default function PatientsPage() {
           </CardHeader>
 
           <CardContent>
-            {/* Results count */}
-            <div className="mb-4 text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredPatients.length)} of{" "}
-              {filteredPatients.length} results
-            </div>
-
-            {/* Table */}
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Age</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Diagnosis</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Last Visit</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedPatients.length > 0 ? (
-                    paginatedPatients.map((patient) => (
-                      <TableRow key={patient.id}>
-                        <TableCell className="font-mono text-sm font-medium">{patient.id}</TableCell>
-                        <TableCell className="font-medium">{patient.name}</TableCell>
-                        <TableCell>{patient.age}</TableCell>
-                        <TableCell className="text-muted-foreground">{patient.gender}</TableCell>
-                        <TableCell className="text-muted-foreground">{patient.phone}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{patient.diagnosis}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{patient.doctor}</TableCell>
-                        <TableCell className="text-muted-foreground">{patient.lastVisit}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/patients/${patient.id}`}>
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        No patients found matching your criteria
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
+            ) : (
+              <>
+                {/* Results count */}
+                <div className="mb-4 text-sm text-muted-foreground">
+                  Showing {filteredPatients.length > 0 ? startIndex + 1 : 0} to{" "}
+                  {Math.min(startIndex + itemsPerPage, filteredPatients.length)} of {filteredPatients.length} results
+                </div>
+
+                {/* Table */}
+                <div className="rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>OPD No</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Age</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Diagnosis</TableHead>
+                        <TableHead>Doctor</TableHead>
+                        <TableHead>Last Visit</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedPatients.length > 0 ? (
+                        paginatedPatients.map((patient) => (
+                          <TableRow key={patient.id}>
+                            <TableCell className="font-mono text-sm font-medium">{patient.id}</TableCell>
+                            <TableCell className="font-medium">{patient.name}</TableCell>
+                            <TableCell>{patient.age}</TableCell>
+                            <TableCell className="text-muted-foreground">{patient.gender}</TableCell>
+                            <TableCell className="text-muted-foreground">{patient.phone}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn("px-2.5 py-0.5 font-semibold", getDiagnosisColor(patient.diagnosis))}>
+                                {patient.diagnosis || "N/A"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{patient.doctor}</TableCell>
+                            <TableCell className="text-muted-foreground">{patient.lastVisit}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link href={`/patients/${patient.id}`}>
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
+                                </Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                            No patients found matching your criteria
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -200,3 +259,4 @@ export default function PatientsPage() {
     </main>
   )
 }
+

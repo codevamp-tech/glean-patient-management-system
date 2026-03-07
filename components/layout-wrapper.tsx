@@ -8,6 +8,12 @@ import { AppSidebar } from "@/components/app-sidebar"
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const isChatPage = pathname === "/chat"
+    const isAuthPage = pathname === "/login" || pathname === "/signup"
+
+    // If it's an auth page (login/signup), don't wrap with SidebarProvider or show AppSidebar
+    if (isAuthPage) {
+        return <div className="min-h-screen w-full">{children}</div>
+    }
 
     return (
         <SidebarProvider defaultOpen={true}>

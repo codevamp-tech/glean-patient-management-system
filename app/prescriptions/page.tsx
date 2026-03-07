@@ -1,467 +1,399 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pill, Package, X, Eye } from "lucide-react"
+import { Pill, Package, X, Eye, Loader2, ClipboardList } from "lucide-react"
 import { CreatePrescriptionDialog } from "@/components/create-prescription-dialog"
 
-const mockPatientMedications: { [key: string]: any } = {
-  P001: {
-    patientName: "Rajesh Kumar",
-    doctor: "Dr. Sharma",
-    medications: [
-      {
-        id: "M001",
-        name: "Ibuprofen 400mg",
-        dosage: "1 tablet twice daily",
-        quantity: 30,
-        issued: "2024-12-15",
-        status: "Active",
-      },
-      {
-        id: "M002",
-        name: "Calcium Supplement",
-        dosage: "1 tablet daily",
-        quantity: 60,
-        issued: "2024-12-10",
-        status: "Active",
-      },
-      {
-        id: "M003",
-        name: "Vitamin D3 1000IU",
-        dosage: "1 tablet daily",
-        quantity: 60,
-        issued: "2024-12-05",
-        status: "Filled",
-      },
-    ],
-  },
-  P002: {
-    patientName: "Priya Nair",
-    doctor: "Dr. Singh",
-    medications: [
-      {
-        id: "M004",
-        name: "Muscle Relaxant",
-        dosage: "1 tablet at night",
-        quantity: 15,
-        issued: "2024-12-18",
-        status: "Filled",
-      },
-      {
-        id: "M005",
-        name: "Pain Relief Cream",
-        dosage: "Apply twice daily",
-        quantity: 2,
-        issued: "2024-12-15",
-        status: "Active",
-      },
-      {
-        id: "M006",
-        name: "Sleeping Aid",
-        dosage: "1 tablet at night",
-        quantity: 30,
-        issued: "2024-12-10",
-        status: "Active",
-      },
-    ],
-  },
-  P003: {
-    patientName: "Arjun Patel",
-    doctor: "Dr. Verma",
-    medications: [
-      {
-        id: "M007",
-        name: "Physical Therapy Cream",
-        dosage: "Apply 3 times daily",
-        quantity: 1,
-        issued: "2024-12-19",
-        status: "Active",
-      },
-      {
-        id: "M008",
-        name: "Anti-inflammatory Gel",
-        dosage: "Apply twice daily",
-        quantity: 2,
-        issued: "2024-12-15",
-        status: "Filled",
-      },
-      {
-        id: "M009",
-        name: "Warm Compress Support",
-        dosage: "As needed",
-        quantity: 5,
-        issued: "2024-12-10",
-        status: "Active",
-      },
-    ],
-  },
-  P004: {
-    patientName: "Meera Gupta",
-    doctor: "Dr. Sharma",
-    medications: [
-      {
-        id: "M010",
-        name: "Vitamin D3 1000IU",
-        dosage: "1 tablet daily",
-        quantity: 60,
-        issued: "2024-12-20",
-        status: "Filled",
-      },
-      {
-        id: "M011",
-        name: "Multivitamin",
-        dosage: "1 tablet daily",
-        quantity: 90,
-        issued: "2024-12-15",
-        status: "Active",
-      },
-    ],
-  },
-  P005: {
-    patientName: "Vikram Desai",
-    doctor: "Dr. Singh",
-    medications: [
-      {
-        id: "M012",
-        name: "Paracetamol 500mg",
-        dosage: "1-2 tablets as needed",
-        quantity: 20,
-        issued: "2024-12-14",
-        status: "Active",
-      },
-      {
-        id: "M013",
-        name: "Antibiotic Cream",
-        dosage: "Apply once daily",
-        quantity: 1,
-        issued: "2024-12-10",
-        status: "Filled",
-      },
-    ],
-  },
+interface Prescription {
+  _id: string
+  id: string
+  patientName: string
+  patientId: string
+  medications: {
+    medication: string
+    dosage: string
+    quantity: number
+  }[]
+  issued: string
+  status: "Active" | "Filled" | "Expired"
+  doctorName: string
+  doctorId: string
+  instructions?: string
+  duration?: string
 }
 
-// Mock pharmacy data
-const mockPrescriptions = [
-  {
-    id: "RX001",
-    patientName: "Rajesh Kumar",
-    patientId: "P001",
-    medication: "Ibuprofen 400mg",
-    dosage: "1 tablet twice daily",
-    quantity: 30,
-    issued: "2024-12-15",
-    status: "Active",
-  },
-  {
-    id: "RX002",
-    patientName: "Priya Nair",
-    patientId: "P002",
-    medication: "Muscle Relaxant",
-    dosage: "1 tablet at night",
-    quantity: 15,
-    issued: "2024-12-18",
-    status: "Filled",
-  },
-  {
-    id: "RX003",
-    patientName: "Arjun Patel",
-    patientId: "P003",
-    medication: "Physical Therapy Cream",
-    dosage: "Apply 3 times daily",
-    quantity: 1,
-    issued: "2024-12-19",
-    status: "Active",
-  },
-  {
-    id: "RX004",
-    patientName: "Meera Gupta",
-    patientId: "P004",
-    medication: "Vitamin D3 1000IU",
-    dosage: "1 tablet daily",
-    quantity: 60,
-    issued: "2024-12-20",
-    status: "Filled",
-  },
-  {
-    id: "RX005",
-    patientName: "Vikram Desai",
-    patientId: "P005",
-    medication: "Paracetamol 500mg",
-    dosage: "1-2 tablets as needed",
-    quantity: 20,
-    issued: "2024-12-14",
-    status: "Active",
-  },
-]
-
 export default function PrescriptionsPage() {
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "filled" | "refills">("all")
-  const [showAllModal, setShowAllModal] = useState(false)
-  const [selectedPatientMeds, setSelectedPatientMeds] = useState<string | null>(null)
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<"all" | "Active" | "Filled">("all")
+  const [selectedPatient, setSelectedPatient] = useState<Prescription | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
 
-  const filteredPrescriptions = mockPrescriptions.filter((rx) => {
-    if (filterStatus === "active") return rx.status === "Active"
-    if (filterStatus === "filled") return rx.status === "Filled"
-    if (filterStatus === "refills") return true
+  const fetchPrescriptions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/prescriptions")
+      if (res.ok) {
+        const data = await res.json()
+        setPrescriptions(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch prescriptions:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPrescriptions()
+  }, [fetchPrescriptions])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStatus])
+
+  const filteredPrescriptions = prescriptions.filter((rx) => {
+    if (filterStatus === "Active") return rx.status === "Active"
+    if (filterStatus === "Filled") return rx.status === "Filled"
     return true
   })
 
+  const activeCount = prescriptions.filter((r) => r.status === "Active").length
+  const filledCount = prescriptions.filter((r) => r.status === "Filled").length
+
+  const totalPages = Math.max(1, Math.ceil(filteredPrescriptions.length / itemsPerPage))
+  const paginatedPrescriptions = filteredPrescriptions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   return (
-    <main className="flex-1">
-      <div className="container py-8 px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Prescriptions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage prescriptions and medications</p>
+    <main className="relative flex-1 min-h-screen overflow-hidden bg-[radial-gradient(ellipse_at_top_right,var(--tw-gradient-stops))] from-blue-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-900/20">
+      {/* Decorative Background Blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="blob top-[-10%] left-[-10%]" />
+        <div className="blob blob-2" />
+        <div className="blob blob-3" />
+      </div>
+
+      <div className="container relative py-10 px-8">
+        <div className="mb-10">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Prescriptions</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Manage prescriptions and medications</p>
         </div>
 
         {/* Pharmacy Stats */}
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <div className="grid gap-8 md:grid-cols-3 mb-10">
           <Card
-            className="cursor-pointer hover:bg-accent transition-colors"
-            onClick={() => setFilterStatus("active")}
+            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Active" ? "bg-blue-500/20 dark:bg-blue-600/30 shadow-lg shadow-blue-500/10" : "bg-blue-500/10 dark:bg-blue-600/20"
+              }`}
+            onClick={() => setFilterStatus("Active")}
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Prescriptions</CardTitle>
+            <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 via-blue-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+              <CardTitle className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-[0.2em]">Active Prescriptions</CardTitle>
+              <div className="p-2.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-blue-500/20">
+                <Pill className="h-5 w-5 text-blue-700 dark:text-blue-300 group-hover:text-white transition-colors" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">156</div>
-              <p className="text-xs text-muted-foreground mt-1">Currently active</p>
+            <CardContent className="relative z-10 pt-4">
+              <div className="text-4xl font-black tracking-tight text-blue-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
+                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : activeCount.toLocaleString()}
+              </div>
+              <p className="text-xs font-medium text-blue-700/70 dark:text-blue-300/70 mt-3">Currently active</p>
             </CardContent>
           </Card>
 
           <Card
-            className="cursor-pointer hover:bg-accent transition-colors"
-            onClick={() => setFilterStatus("filled")}
+            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "Filled" ? "bg-emerald-500/20 dark:bg-emerald-600/30 shadow-lg shadow-emerald-500/10" : "bg-emerald-500/10 dark:bg-emerald-600/20"
+              }`}
+            onClick={() => setFilterStatus("Filled")}
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Filled</CardTitle>
+            <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 via-emerald-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+              <CardTitle className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-[0.2em]">Filled</CardTitle>
+              <div className="p-2.5 bg-emerald-500/20 dark:bg-emerald-400/20 rounded-xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/20">
+                <Package className="h-5 w-5 text-emerald-700 dark:text-emerald-300 group-hover:text-white transition-colors" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">342</div>
-              <p className="text-xs text-muted-foreground mt-1">This month</p>
+            <CardContent className="relative z-10 pt-4">
+              <div className="text-4xl font-black tracking-tight text-emerald-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
+                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : filledCount.toLocaleString()}
+              </div>
+              <p className="text-xs font-medium text-emerald-700/70 dark:text-emerald-300/70 mt-3">This month</p>
             </CardContent>
           </Card>
 
           <Card
-            className="cursor-pointer hover:bg-accent transition-colors"
-            onClick={() => setFilterStatus("refills")}
+            className={`group relative overflow-hidden border-none backdrop-blur-xl border-t border-l border-white/40 dark:border-slate-500/30 hover:shadow-2xl hover:shadow-slate-500/20 transition-all duration-500 cursor-pointer ${filterStatus === "all" ? "bg-slate-500/20 dark:bg-slate-600/30 shadow-lg shadow-slate-500/10" : "bg-slate-500/10 dark:bg-slate-600/20"
+              }`}
+            onClick={() => setFilterStatus("all")}
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Refills</CardTitle>
+            <div className="absolute inset-0 bg-linear-to-br from-slate-500/20 via-slate-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+              <CardTitle className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-[0.2em]">Total</CardTitle>
+              <div className="p-2.5 bg-slate-500/20 dark:bg-slate-400/20 rounded-xl group-hover:scale-110 group-hover:bg-slate-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-slate-500/20">
+                <div className="h-5 w-5 flex items-center justify-center font-black text-xs">Σ</div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">23</div>
-              <p className="text-xs text-muted-foreground mt-1">Awaiting approval</p>
+            <CardContent className="relative z-10 pt-4">
+              <div className="text-4xl font-black tracking-tight text-slate-900 dark:text-white group-hover:translate-x-1 transition-transform duration-500">
+                {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : prescriptions.length.toLocaleString()}
+              </div>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-3">All prescriptions</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Prescriptions Table */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Recent Prescriptions</CardTitle>
-            <CreatePrescriptionDialog>
-              <Button>
+        <div className="glass-premium rounded-3xl p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Recent Prescriptions</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Detailed overview of medication issuances</p>
+            </div>
+            <CreatePrescriptionDialog onCreated={fetchPrescriptions}>
+              <Button className="rounded-xl px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 transition-transform">
                 <Pill className="h-4 w-4 mr-2" />
                 Create Prescription
               </Button>
             </CreatePrescriptionDialog>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient Name</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Medication</TableHead>
-                    <TableHead>Dosage</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Issued Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>View</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPrescriptions.slice(0, 4).map((rx) => (
-                    <TableRow key={rx.id}>
-                      <TableCell className="font-medium">{rx.patientName}</TableCell>
-                      <TableCell className="font-mono text-sm">{rx.patientId}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Pill className="h-4 w-4 text-muted-foreground" />
-                          {rx.medication}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{rx.dosage}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-muted-foreground" />
-                          {rx.quantity}
-                        </div>
-                      </TableCell>
-                      <TableCell>{rx.issued}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            rx.status === "Filled" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                          }
-                        >
-                          {rx.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedPatientMeds(rx.patientId)}
-                          title="View all prescribed medicines"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* View All Prescriptions Modal */}
-      {showAllModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 sticky top-0 bg-background">
-              <CardTitle>All Prescriptions</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setShowAllModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-border">
+          <div>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <span className="ml-3 font-bold text-slate-500">Loading prescriptions...</span>
+              </div>
+            ) : filteredPrescriptions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Pill className="h-12 w-12 text-slate-300 mb-3" />
+                <h3 className="font-black text-slate-900 dark:text-white mb-1">No Prescriptions Found</h3>
+                <p className="text-sm font-medium text-slate-500">Create the first prescription to get started.</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden bg-white/30 dark:bg-slate-950/30">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Patient Name</TableHead>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Dosage</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Issued Date</TableHead>
-                      <TableHead>Status</TableHead>
+                  <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                    <TableRow className="hover:bg-transparent border-slate-200/50 dark:border-slate-800/50">
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Patient Name</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">OPD NO</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Medications</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Doctor</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Issued Date</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12">Status</TableHead>
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-500 h-12 text-right">View</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockPrescriptions.map((rx) => (
-                      <TableRow key={rx.id}>
-                        <TableCell className="font-medium">{rx.patientName}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Pill className="h-4 w-4 text-muted-foreground" />
-                            {rx.medication}
+                    {paginatedPrescriptions.map((rx) => (
+                      <TableRow key={rx._id} className="group hover:bg-slate-500/5 transition-colors border-slate-200/50 dark:border-slate-800/50">
+                        <TableCell className="font-bold text-slate-900 dark:text-white py-4">{rx.patientName}</TableCell>
+                        <TableCell className="font-mono text-[11px] text-slate-500 py-4">{rx.patientId}</TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                              <Pill className="h-3.5 w-3.5 text-blue-500" />
+                              {rx.medications?.[0]?.medication || (rx as any).medication || "No medicine"}
+                            </div>
+                            {rx.medications?.length > 1 && (
+                              <span className="text-[10px] font-black text-blue-500 opacity-70 uppercase tracking-tighter">
+                                + {rx.medications.length - 1} more items
+                              </span>
+                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{rx.dosage}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            {rx.quantity}
-                          </div>
-                        </TableCell>
-                        <TableCell>{rx.issued}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-sm font-bold text-slate-700 dark:text-slate-300 py-4">{rx.doctorName}</TableCell>
+                        <TableCell className="text-sm font-medium text-slate-500 py-4">{rx.issued}</TableCell>
+                        <TableCell className="py-4">
                           <Badge
-                            className={
-                              rx.status === "Filled" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                            }
+                            className={`text-[10px] font-black uppercase tracking-wider rounded-lg px-2.5 py-1 ${rx.status === "Filled" ? "bg-emerald-500/10 text-emerald-700 border-emerald-200/50" : "bg-blue-500/10 text-blue-700 border-blue-200/50"
+                              }`}
                           >
                             {rx.status}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right py-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all p-0"
+                            onClick={() => setSelectedPatient(rx)}
+                            title="View prescription details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
+            )}
+            {!loading && totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Showing <span className="font-bold">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold">{Math.min(currentPage * itemsPerPage, filteredPrescriptions.length)}</span> of <span className="font-bold">{filteredPrescriptions.length}</span> prescriptions
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-lg border-slate-200 dark:border-slate-800"
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm font-bold text-slate-700 dark:text-slate-300 w-20 text-center">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border-slate-200 dark:border-slate-800"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
-      {selectedPatientMeds && mockPatientMedications[selectedPatientMeds] && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 sticky top-0 bg-background border-b">
-              <div>
-                <CardTitle>Prescribed Medications</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {mockPatientMedications[selectedPatientMeds].patientName} - Doctor:{" "}
-                  {mockPatientMedications[selectedPatientMeds].doctor}
+      {/* Prescription Detail Modal */}
+      {selectedPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden border-none bg-white dark:bg-slate-950 rounded-3xl shadow-2xl flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 px-8 py-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-black text-slate-900 dark:text-white">Prescription Details</CardTitle>
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                  {selectedPatient.patientName} • {selectedPatient.doctorName.toLowerCase().startsWith('dr') ? selectedPatient.doctorName : `Dr. ${selectedPatient.doctorName}`}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedPatientMeds(null)}>
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)} className="h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X className="h-5 w-5 text-slate-500" />
               </Button>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="rounded-lg border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Dosage</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Issued Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockPatientMedications[selectedPatientMeds].medications.map((med: any) => (
-                      <TableRow key={med.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Pill className="h-4 w-4 text-muted-foreground" />
-                            {med.name}
+
+            <CardContent className="px-8 py-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/30 dark:bg-slate-950/30">
+              <div className="space-y-8">
+                {/* Admin Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Prescription No.</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white font-mono">{selectedPatient.id}</p>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Patient ID</p>
+                    <p className="text-sm font-black text-slate-900 dark:text-white font-mono">{selectedPatient.patientId}</p>
+                  </div>
+                </div>
+
+                {/* Medications List */}
+                <div className="space-y-4">
+                  <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Prescribed Medications</h3>
+
+                  {selectedPatient.medications?.map((med, idx) => (
+                    <div key={idx} className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <Pill className="h-5 w-5" />
                           </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{med.dosage}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            {med.quantity}
+                          <div>
+                            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">Item {idx + 1}</p>
+                            <h4 className="text-base font-black text-slate-900 dark:text-white">{med.medication}</h4>
                           </div>
-                        </TableCell>
-                        <TableCell>{med.issued}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              med.status === "Filled" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
-                            }
-                          >
-                            {med.status}
+                        </div>
+                        {idx === 0 && (
+                          <Badge className={`rounded-xl px-3 py-1 border-none font-bold text-[10px] ${selectedPatient.status === "Filled" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"}`}>
+                            {selectedPatient.status}
                           </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-                <Button variant="outline" onClick={() => setSelectedPatientMeds(null)}>
-                  Close
-                </Button>
-                <Button>
-                  <Package className="h-4 w-4 mr-2" />
-                  Print Medications
-                </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Dosage</p>
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{med.dosage}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Quantity</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">{med.quantity} Units</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Legacy Fallback */}
+                  {(!selectedPatient.medications || selectedPatient.medications.length === 0) && (selectedPatient as any).medication && (
+                    <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500">
+                          <Pill className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Legacy Record</p>
+                          <h4 className="text-base font-black text-slate-900 dark:text-white">{(selectedPatient as any).medication}</h4>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Dosage</p>
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{(selectedPatient as any).dosage || "N/A"}</p>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Quantity</p>
+                          <p className="text-sm font-black text-slate-900 dark:text-white">{(selectedPatient as any).quantity || "0"} Units</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="grid grid-cols-2 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date Issued</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedPatient.issued}</p>
+                  </div>
+                  {selectedPatient.duration && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Duration</p>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedPatient.duration}</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedPatient.instructions && (
+                  <div className="p-5 bg-blue-50/50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardList className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Instructions</p>
+                    </div>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300 italic leading-relaxed">
+                      "{selectedPatient.instructions}"
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
+
+            <div className="p-8 bg-slate-50 dark:bg-slate-950/50 flex flex-col sm:flex-row gap-3 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setSelectedPatient(null)} className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900">
+                Close
+              </Button>
+              <Button className="flex-1 h-12 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs uppercase tracking-widest hover:opacity-90 shadow-lg">
+                <Package className="h-4 w-4 mr-2" />
+                Print Rx
+              </Button>
+            </div>
           </Card>
         </div>
       )}

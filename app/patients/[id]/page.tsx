@@ -4,17 +4,36 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { User, Phone, Mail, Calendar, FileText, Download, ExternalLink, ArrowLeft } from "lucide-react"
-import { mockPatients, mockReports } from "@/lib/data"
+import dbConnect from "@/lib/dbConnect"
+import Patient from "@/lib/models/Patient"
+import Report from "@/lib/models/Report"
+import Appointment from "@/lib/models/Appointment"
+import MedicalRecord from "@/lib/models/MedicalRecord"
+import ImagingStudy from "@/lib/models/ImagingStudy"
 import { ImagingStudies } from "@/components/imaging-studies"
 import Link from "next/link"
-import { AddReportDialog } from "@/components/add-report-dialog"
-import { ScheduleVisitDialog } from "@/components/schedule-visit-dialog"
+import { CreateMedicalRecordDialog } from "@/components/create-medical-record-dialog"
+import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { ViewReportDialog } from "@/components/view-report-dialog"
+import { CreatePrescriptionDialog } from "@/components/create-prescription-dialog"
+import { FileSignature } from "lucide-react"
 
 export default async function PatientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const patient = mockPatients.find((p) => p.id === id)
-  const patientReports = mockReports.filter((r) => r.patientId === id)
+
+  await dbConnect()
+  const patientData = await Patient.findOne({ id }).lean()
+  const patientReportsData = await Report.find({ patientId: id }).lean()
+  const patientAppointmentsData = await Appointment.find({ patientId: id }).sort({ date: -1 }).lean()
+  const patientMedicalRecordsData = await MedicalRecord.find({ patientId: id }).sort({ createdAt: -1 }).lean()
+  const patientImagingStudiesData = await ImagingStudy.find({ patientId: id }).sort({ createdAt: -1 }).lean()
+
+  // Convert _id to string for serialization
+  const patient = patientData ? JSON.parse(JSON.stringify(patientData)) : null
+  const patientReports = JSON.parse(JSON.stringify(patientReportsData))
+  const patientAppointments = JSON.parse(JSON.stringify(patientAppointmentsData))
+  const patientMedicalRecords = JSON.parse(JSON.stringify(patientMedicalRecordsData))
+  const patientImagingStudies = JSON.parse(JSON.stringify(patientImagingStudiesData))
 
   if (!patient) {
     return (
@@ -68,18 +87,24 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
               </div>
             </div>
             <div className="flex gap-2">
-              <AddReportDialog patientId={patient.id} patientName={patient.name}>
+              <CreateMedicalRecordDialog preselectedPatientId={patient.id}>
                 <Button variant="outline">
                   <FileText className="h-4 w-4 mr-2" />
                   Add Report
                 </Button>
-              </AddReportDialog>
-              <ScheduleVisitDialog patientId={patient.id} patientName={patient.name}>
+              </CreateMedicalRecordDialog>
+              <CreatePrescriptionDialog preselectedPatientId={patient.id}>
+                <Button variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/40">
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Create Prescription
+                </Button>
+              </CreatePrescriptionDialog>
+              <CreateAppointmentDialog preselectedPatientId={patient.id}>
                 <Button>
                   <Calendar className="h-4 w-4 mr-2" />
                   Schedule Visit
                 </Button>
-              </ScheduleVisitDialog>
+              </CreateAppointmentDialog>
             </div>
           </div>
         </div>
@@ -217,23 +242,32 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-start gap-4 p-4 rounded-lg border border-border">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-foreground">Orthopedic Checkup</p>
-                          <p className="text-sm text-muted-foreground">{patient.lastVisit}</p>
+                  {patientAppointments.length > 0 ? (
+                    patientAppointments.map((apt: any) => (
+                      <div key={apt._id} className="flex items-start gap-4 p-4 rounded-lg border border-border group hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-primary" />
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">with {patient.doctor}</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Orthopedic examination and assessment. Physical therapy progress reviewed.
-                        </p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-foreground">{apt.type} - {apt.specialty}</p>
+                            <Badge variant="outline">{apt.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{apt.date} at {apt.time} with {apt.doctor}</p>
+                          {apt.notes && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {apt.notes}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No visits or appointments found</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -247,47 +281,37 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 <CardDescription>Imaging and diagnostic reports organized by type</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {Object.entries(reportsByType).map(([type, reports]) => (
-                  <div key={type}>
-                    <h3 className="text-lg font-semibold text-foreground mb-3">{type}</h3>
-                    <div className="space-y-2">
-                      {reports.map((report) => (
-                        <div
-                          key={report.id}
-                          className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="h-16 w-16 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                              <FileText className="h-8 w-8 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground">{report.name}</p>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                <span>{report.date}</span>
-                              </div>
-                            </div>
+                {patientMedicalRecords.length > 0 ? (
+                  <div className="space-y-2">
+                    {patientMedicalRecords.map((record: any) => (
+                      <div
+                        key={record._id}
+                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="h-16 w-16 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-8 w-8 text-primary" />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <ViewReportDialog report={report}>
-                              <Button variant="ghost" size="sm">
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                            </ViewReportDialog>
-                            <Button variant="ghost" size="sm">
-                              <Download className="h-4 w-4" />
-                            </Button>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground">{record.recordType}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <span>{record.date}</span>
+                              <span>•</span>
+                              <span>Dr. {record.doctor}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 truncate">{record.summary}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={record.status === "Active" ? "default" : "secondary"}>{record.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-
-                {patientReports.length === 0 && (
+                ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No medical reports found for this patient</p>
+                    <p>No medical records found for this patient</p>
                   </div>
                 )}
               </CardContent>
@@ -296,7 +320,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
           {/* Imaging Tab */}
           <TabsContent value="imaging" className="space-y-6">
-            <ImagingStudies />
+            <ImagingStudies studies={patientImagingStudies} />
           </TabsContent>
         </Tabs>
       </div>

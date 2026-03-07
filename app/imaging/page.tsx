@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
-import { FileImage, AlertCircle, CheckCircle2, Eye, Download, Maximize2, FileText } from "lucide-react"
+import { FileImage, AlertCircle, CheckCircle2, Eye, Download, Maximize2, FileText, Plus, Loader2 } from "lucide-react"
+import { CreateImagingDialog } from "@/components/create-imaging-dialog"
 
 interface ImagingStudy {
+  _id: string
   id: string
   patientId: string
   patientName: string
@@ -22,106 +24,60 @@ interface ImagingStudy {
   year: string
   aiFlag?: "Normal" | "Abnormal" | "Requires Review"
   thumbnail: string
+  doctor: string
 }
 
-const mockImagingStudies: ImagingStudy[] = [
-  {
-    id: "IMG001",
-    patientId: "P002",
-    patientName: "Sarah Patel",
-    studyType: "Lumbar Spine MRI",
-    bodyPart: "Lumbar Spine",
-    modality: "MRI",
-    date: "2024-12-18",
-    month: "Dec",
-    year: "2024",
-    aiFlag: "Abnormal",
-    thumbnail: "/lumbar-spine-mri-ortho.jpg",
-  },
-  {
-    id: "IMG002",
-    patientId: "P001",
-    patientName: "John Kumar",
-    studyType: "Knee X-Ray (AP & Lateral)",
-    bodyPart: "Knee",
-    modality: "X-Ray",
-    date: "2024-12-15",
-    month: "Dec",
-    year: "2024",
-    aiFlag: "Normal",
-    thumbnail: "/knee-xray-ortho.jpg",
-  },
-  {
-    id: "IMG003",
-    patientId: "P003",
-    patientName: "Raj Malhotra",
-    studyType: "Shoulder X-Ray",
-    bodyPart: "Shoulder",
-    modality: "X-Ray",
-    date: "2024-12-19",
-    month: "Dec",
-    year: "2024",
-    aiFlag: "Requires Review",
-    thumbnail: "/shoulder-xray-ortho.jpg",
-  },
-  {
-    id: "IMG004",
-    patientId: "P004",
-    patientName: "Priya Reddy",
-    studyType: "Cervical Spine CT",
-    bodyPart: "Cervical Spine",
-    modality: "CT",
-    date: "2024-12-20",
-    month: "Dec",
-    year: "2024",
-    aiFlag: "Abnormal",
-    thumbnail: "/cervical-ct-ortho.jpg",
-  },
-  {
-    id: "IMG005",
-    patientId: "P005",
-    patientName: "Amit Gupta",
-    studyType: "Ankle X-Ray",
-    bodyPart: "Ankle",
-    modality: "X-Ray",
-    date: "2024-12-14",
-    month: "Dec",
-    year: "2024",
-    aiFlag: "Normal",
-    thumbnail: "/ankle-xray-ortho.jpg",
-  },
-  {
-    id: "IMG006",
-    patientId: "P002",
-    patientName: "Sarah Patel",
-    studyType: "Hip Ultrasound",
-    bodyPart: "Hip",
-    modality: "Ultrasound",
-    date: "2024-11-28",
-    month: "Nov",
-    year: "2024",
-    aiFlag: "Normal",
-    thumbnail: "/hip-ultrasound-ortho.jpg",
-  },
-]
-
 export default function ImagingPage() {
+  const [studies, setStudies] = useState<ImagingStudy[]>([])
+  const [loading, setLoading] = useState(true)
   const [modalityFilter, setModalityFilter] = useState("all")
   const [bodyPartFilter, setBodyPartFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6
   const [selectedImage, setSelectedImage] = useState<ImagingStudy | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [showReport, setShowReport] = useState(false)
 
-  const filteredStudies = mockImagingStudies.filter((study) => {
+  const fetchStudies = useCallback(async () => {
+    try {
+      const res = await fetch("/api/imaging")
+      if (res.ok) {
+        const data = await res.json()
+        setStudies(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch imaging studies:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchStudies()
+  }, [fetchStudies])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [modalityFilter, bodyPartFilter, yearFilter])
+
+  // Derive unique body parts and years from fetched data
+  const uniqueBodyParts = Array.from(new Set(studies.map((s) => s.bodyPart))).sort()
+  const uniqueYears = Array.from(new Set(studies.map((s) => s.year))).sort((a, b) => Number(b) - Number(a))
+
+  const filteredStudies = studies.filter((study) => {
     const matchesModality = modalityFilter === "all" || study.modality === modalityFilter
     const matchesBodyPart = bodyPartFilter === "all" || study.bodyPart === bodyPartFilter
     const matchesYear = yearFilter === "all" || study.year === yearFilter
     return matchesModality && matchesBodyPart && matchesYear
   })
 
+  const totalPages = Math.max(1, Math.ceil(filteredStudies.length / itemsPerPage))
+  const paginatedStudies = filteredStudies.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
   const openImageView = (study: ImagingStudy) => {
     setSelectedImage(study)
+    setShowReport(false)
     setIsDialogOpen(true)
   }
 
@@ -153,7 +109,15 @@ export default function ImagingPage() {
   return (
     <main className="flex-1">
       <div className="container py-8 px-8">
-        <PageHeader title="Documents & Imaging" description="Browse and manage orthopedic imaging studies" />
+        <div className="flex items-start justify-between mb-6">
+          <PageHeader title="Documents & Imaging" description="Browse and manage orthopedic imaging studies" />
+          <CreateImagingDialog onCreated={fetchStudies}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Imaging Study
+            </Button>
+          </CreateImagingDialog>
+        </div>
 
         {/* Filters */}
         <Card className="mb-6">
@@ -178,12 +142,11 @@ export default function ImagingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Body Parts</SelectItem>
-                  <SelectItem value="Knee">Knee</SelectItem>
-                  <SelectItem value="Lumbar Spine">Lumbar Spine</SelectItem>
-                  <SelectItem value="Cervical Spine">Cervical Spine</SelectItem>
-                  <SelectItem value="Shoulder">Shoulder</SelectItem>
-                  <SelectItem value="Ankle">Ankle</SelectItem>
-                  <SelectItem value="Hip">Hip</SelectItem>
+                  {uniqueBodyParts.map((part) => (
+                    <SelectItem key={part} value={part}>
+                      {part}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -193,23 +156,33 @@ export default function ImagingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Years</SelectItem>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
+                  {uniqueYears.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="mt-4 text-sm text-muted-foreground">
-              Showing {filteredStudies.length} imaging {filteredStudies.length === 1 ? "study" : "studies"}
+              {loading
+                ? "Loading imaging studies..."
+                : `Showing ${filteredStudies.length} imaging ${filteredStudies.length === 1 ? "study" : "studies"}`}
             </div>
           </CardContent>
         </Card>
 
         {/* Grid */}
-        {filteredStudies.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            <span className="ml-3 text-muted-foreground text-lg">Loading imaging studies...</span>
+          </div>
+        ) : filteredStudies.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredStudies.map((study) => (
-              <Card key={study.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            {paginatedStudies.map((study) => (
+              <Card key={study._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div
                   className="relative aspect-square bg-muted group cursor-pointer"
                   onClick={() => openImageView(study)}
@@ -273,9 +246,40 @@ export default function ImagingPage() {
             <CardContent className="py-24 text-center">
               <FileImage className="h-20 w-20 mx-auto text-muted-foreground opacity-20 mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No Imaging Studies Found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters to see more results</p>
+              <p className="text-muted-foreground">Try adjusting your filters or add a new imaging study.</p>
             </CardContent>
           </Card>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-8 glass-premium p-4 rounded-2xl">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Showing <span className="font-bold">{((currentPage - 1) * itemsPerPage) + 1}</span> to <span className="font-bold">{Math.min(currentPage * itemsPerPage, filteredStudies.length)}</span> of <span className="font-bold">{filteredStudies.length}</span> studies
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border-slate-200 dark:border-slate-800"
+              >
+                Previous
+              </Button>
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-300 w-20 text-center">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border-slate-200 dark:border-slate-800"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -321,7 +325,7 @@ export default function ImagingPage() {
                         {selectedImage.aiFlag === "Abnormal"
                           ? `Abnormal findings consistent with degenerative changes. Moderate to severe structural abnormalities noted in the ${selectedImage.bodyPart.toLowerCase()}.`
                           : selectedImage.aiFlag === "Requires Review"
-                            ? `Equivocal findings requiring clinical correlation. Further evaluation recommended to determine clinical significance.`
+                            ? `Equivocal findings requiring clinical correlation. Further evaluation recommended.`
                             : `No acute abnormalities detected. Normal anatomical structures visualized in the ${selectedImage.bodyPart.toLowerCase()}.`}
                       </p>
                     </div>
@@ -360,6 +364,10 @@ export default function ImagingPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Date</p>
                   <p className="text-base text-foreground">{selectedImage.date}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Doctor Assigned</p>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">Dr. {selectedImage.doctor}</p>
                 </div>
                 {selectedImage.aiFlag && (
                   <div>

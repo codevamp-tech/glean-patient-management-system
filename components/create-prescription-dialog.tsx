@@ -1,125 +1,347 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Loader2, Search, Plus, Trash2, User } from "lucide-react"
 
-export function CreatePrescriptionDialog({ children }: any) {
+interface Patient {
+  _id: string
+  id: string
+  name: string
+}
+
+interface Doctor {
+  _id: string
+  id: string
+  name: string
+}
+
+interface MedicationEntry {
+  medication: string
+  dosage: string
+  quantity: string
+}
+
+interface CreatePrescriptionDialogProps {
+  children: React.ReactNode
+  onCreated?: () => void
+  preselectedPatientId?: string
+}
+
+export function CreatePrescriptionDialog({ children, onCreated, preselectedPatientId }: CreatePrescriptionDialogProps) {
   const [open, setOpen] = useState(false)
-  const [patientId, setPatientId] = useState("")
-  const [medication, setMedication] = useState("")
-  const [dosage, setDosage] = useState("")
-  const [quantity, setQuantity] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [loadingMetadata, setLoadingMetadata] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  const [selectedPatientId, setSelectedPatientId] = useState("")
+  const [selectedDoctorId, setSelectedDoctorId] = useState("")
+  const [medications, setMedications] = useState<MedicationEntry[]>([
+    { medication: "", dosage: "", quantity: "" }
+  ])
+  const [status, setStatus] = useState("Active")
   const [duration, setDuration] = useState("")
   const [instructions, setInstructions] = useState("")
 
-  const handleSubmit = () => {
-    console.log("[v0] Creating prescription:", {
-      patientId,
-      medication,
-      dosage,
-      quantity,
-      duration,
-      instructions,
-    })
-    setOpen(false)
-    setPatientId("")
-    setMedication("")
-    setDosage("")
-    setQuantity("")
+  useEffect(() => {
+    if (open) {
+      fetchMetadata()
+    }
+  }, [open])
+
+  const fetchMetadata = async () => {
+    setLoadingMetadata(true)
+    try {
+      const [patientsRes, doctorsRes, authRes] = await Promise.all([
+        fetch("/api/patients"),
+        fetch("/api/doctors"),
+        fetch("/api/auth/me")
+      ])
+
+      if (patientsRes.ok) {
+        const patientsData = await patientsRes.json()
+        setPatients(patientsData)
+        if (preselectedPatientId) {
+          const matched = patientsData.find((p: any) => p.id === preselectedPatientId || p._id === preselectedPatientId)
+          if (matched) setSelectedPatientId(matched._id)
+        }
+      }
+
+      let fetchedDoctors: Doctor[] = []
+      if (doctorsRes.ok) {
+        fetchedDoctors = await doctorsRes.json()
+        setDoctors(fetchedDoctors)
+      }
+
+      if (authRes.ok) {
+        const authData = await authRes.json()
+        setCurrentUser(authData.user)
+        if (authData.user.role === "DOCTOR") {
+          const doc = fetchedDoctors.find(d => d.name === authData.user.name)
+          if (doc) {
+            setSelectedDoctorId(doc._id)
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch metadata:", error)
+    } finally {
+      setLoadingMetadata(false)
+    }
+  }
+
+  const resetForm = () => {
+    setSelectedPatientId("")
+    // Only reset doctor id if not a doctor
+    if (currentUser?.role !== "DOCTOR") {
+      setSelectedDoctorId("")
+    }
+    setMedications([{ medication: "", dosage: "", quantity: "" }])
+    setStatus("Active")
     setDuration("")
     setInstructions("")
+  }
+
+  const addMedication = () => {
+    setMedications([...medications, { medication: "", dosage: "", quantity: "" }])
+  }
+
+  const removeMedication = (index: number) => {
+    if (medications.length > 1) {
+      const newMedications = [...medications]
+      newMedications.splice(index, 1)
+      setMedications(newMedications)
+    }
+  }
+
+  const updateMedication = (index: number, field: keyof MedicationEntry, value: string) => {
+    const newMedications = [...medications]
+    newMedications[index] = { ...newMedications[index], [field]: value }
+    setMedications(newMedications)
+  }
+
+  const handleSubmit = async () => {
+    const patient = patients.find(p => p._id === selectedPatientId)
+    const doctor = doctors.find(d => d._id === selectedDoctorId)
+
+    const validMedications = medications.filter(m => m.medication && m.dosage && m.quantity)
+
+    if (!patient || !doctor || validMedications.length === 0) return
+
+    setLoading(true)
+    try {
+      const res = await fetch("/api/prescriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientName: patient.name,
+          patientId: patient.id,
+          doctorName: doctor.name,
+          doctorId: doctor.id,
+          medications: validMedications.map(m => ({
+            ...m,
+            quantity: Number(m.quantity)
+          })),
+          status,
+          duration,
+          instructions,
+        }),
+      })
+      if (res.ok) {
+        setOpen(false)
+        resetForm()
+        onCreated?.()
+      }
+    } catch (error) {
+      console.error("Failed to create prescription:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create New Prescription</DialogTitle>
+      <DialogContent className="max-w-2xl h-[95vh] bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl border border-white/20 dark:border-slate-800/50 rounded-[2rem] shadow-2xl overflow-hidden p-0 animate-in fade-in zoom-in-95 duration-300">
+        <DialogHeader className="px-8 pt-8 pb-4 bg-slate-500/5 border-b border-slate-200/50 dark:border-slate-800/50">
+          <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">Create New Prescription</DialogTitle>
+          <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1.5 px-0.5">Pharmacy Management System</p>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="patientId">Patient ID</Label>
-            <Select value={patientId} onValueChange={setPatientId}>
-              <SelectTrigger id="patientId">
-                <SelectValue placeholder="Select patient" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="P001">P001 - Rajesh Kumar</SelectItem>
-                <SelectItem value="P002">P002 - Priya Nair</SelectItem>
-                <SelectItem value="P003">P003 - Arjun Patel</SelectItem>
-                <SelectItem value="P004">P004 - Meera Gupta</SelectItem>
-                <SelectItem value="P005">P005 - Vikram Desai</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="medication">Medication Name</Label>
-            <Input
-              id="medication"
-              value={medication}
-              onChange={(e) => setMedication(e.target.value)}
-              placeholder="e.g., Ibuprofen 400mg"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+
+        <div className="px-8 py-6 space-y-6 h-[calc(95vh-180px)] overflow-y-auto custom-scrollbar">
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Select Patient</Label>
+                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+                  <SelectTrigger className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50">
+                    <SelectValue placeholder={loadingMetadata ? "Searching..." : "Choose patient"} />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-2xl">
+                    {patients.map((p) => (
+                      <SelectItem key={p._id} value={p._id} className="rounded-xl focus:bg-blue-600 focus:text-white py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm">{p.name}</span>
+                          <span className="text-[10px] opacity-60 font-mono uppercase">ID: {p.id}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {currentUser?.role !== "DOCTOR" && (
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Prescribing Doctor</Label>
+                  <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                    <SelectTrigger className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50">
+                      <SelectValue placeholder={loadingMetadata ? "Searching..." : "Choose doctor"} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-2xl">
+                      {doctors.map((d) => (
+                        <SelectItem key={d._id} value={d._id} className="rounded-xl focus:bg-blue-600 focus:text-white py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-blue-500" />
+                            </div>
+                            <span className="font-bold text-sm">{d.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between ml-1">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Medications List</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addMedication}
+                  className="rounded-full h-8 px-3 text-[10px] font-black uppercase tracking-widest border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Medicine
+                </Button>
+              </div>
+
+              {medications.map((med, index) => (
+                <div key={index} className="p-5 rounded-3xl bg-slate-500/5 border border-slate-200/50 dark:border-slate-800/50 space-y-4 relative group">
+                  {medications.length > 1 && (
+                    <button
+                      onClick={() => removeMedication(index)}
+                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Medication {index + 1}</Label>
+                    <div className="relative group/input">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                      <Input
+                        value={med.medication}
+                        onChange={(e) => updateMedication(index, "medication", e.target.value)}
+                        className="h-12 pl-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50"
+                        placeholder="e.g., Amoxicillin 500mg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Dosage</Label>
+                      <Input
+                        value={med.dosage}
+                        onChange={(e) => updateMedication(index, "dosage", e.target.value)}
+                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50"
+                        placeholder="e.g., 2 times daily"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Quantity</Label>
+                      <Input
+                        type="number"
+                        value={med.quantity}
+                        onChange={(e) => updateMedication(index, "quantity", e.target.value)}
+                        className="h-12 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50"
+                        placeholder="Count"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Initial Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="status" className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
+                    <SelectItem value="Active" className="rounded-xl py-2.5">Active</SelectItem>
+                    <SelectItem value="Filled" className="rounded-xl py-2.5">Filled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Treatment Duration</Label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger id="duration" className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 shadow-sm transition-all hover:border-blue-500/50">
+                    <SelectValue placeholder="Select timeframe" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
+                    <SelectItem value="1 week" className="rounded-xl py-2.5">1 Week</SelectItem>
+                    <SelectItem value="2 weeks" className="rounded-xl py-2.5">2 Weeks</SelectItem>
+                    <SelectItem value="1 month" className="rounded-xl py-2.5">1 Month</SelectItem>
+                    <SelectItem value="3 months" className="rounded-xl py-2.5">3 Months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="dosage">Dosage</Label>
-              <Input
-                id="dosage"
-                value={dosage}
-                onChange={(e) => setDosage(e.target.value)}
-                placeholder="e.g., 1 tablet twice daily"
+              <Label htmlFor="instructions" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Additional Instructions</Label>
+              <Textarea
+                id="instructions"
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Dosage warnings or specific clinical instructions..."
+                className="rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 min-h-[120px] resize-none shadow-sm transition-all hover:border-blue-500/50 p-4"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="e.g., 30"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="duration">Duration</Label>
-            <Select value={duration} onValueChange={setDuration}>
-              <SelectTrigger id="duration">
-                <SelectValue placeholder="Select duration" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1 week">1 Week</SelectItem>
-                <SelectItem value="2 weeks">2 Weeks</SelectItem>
-                <SelectItem value="1 month">1 Month</SelectItem>
-                <SelectItem value="3 months">3 Months</SelectItem>
-                <SelectItem value="6 months">6 Months</SelectItem>
-                <SelectItem value="1 year">1 Year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="instructions">Instructions</Label>
-            <Textarea
-              id="instructions"
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g., Take with food, avoid dairy products..."
-              rows={3}
-            />
           </div>
         </div>
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+
+        <div className="p-8 bg-slate-50 dark:bg-slate-900/80 flex gap-4 justify-end border-t border-slate-200 dark:border-slate-800 sticky bottom-0">
+          <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl px-6 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all">
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>Create Prescription</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !selectedPatientId || !selectedDoctorId || medications.some(m => !m.medication || !m.dosage || !m.quantity)}
+            className="rounded-2xl px-10 h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.02] active:scale-[0.98] transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-slate-500/20 dark:shadow-none"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : "Create Prescription"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

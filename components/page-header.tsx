@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
-import { mockPatients, mockReports } from "@/lib/data"
 import { useRouter } from "next/navigation"
 import { FileText, User } from "lucide-react"
 
@@ -20,32 +19,48 @@ export function PageHeader({ title, description, showSearch = false }: PageHeade
   const router = useRouter()
 
   useEffect(() => {
-    if (searchTerm.length >= 2) {
-      const patients = mockPatients
-        .filter(
-          (p) =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()),
-        )
-        .slice(0, 5)
-        .map((p) => ({ type: "patient", data: p }))
+    const fetchData = async () => {
+      if (searchTerm.length >= 2) {
+        try {
+          const [patientsRes, reportsRes] = await Promise.all([
+            fetch("/api/patients"),
+            fetch("/api/reports")
+          ])
 
-      const reports = mockReports
-        .filter(
-          (r) =>
-            r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.type.toLowerCase().includes(searchTerm.toLowerCase()),
-        )
-        .slice(0, 5)
-        .map((r) => ({ type: "report", data: r }))
+          const allPatients = await patientsRes.json()
+          const allReports = await reportsRes.json()
 
-      setSearchResults([...patients, ...reports])
-      setShowResults(true)
-    } else {
-      setSearchResults([])
-      setShowResults(false)
+          const filteredPatients = (Array.isArray(allPatients) ? allPatients : [])
+            .filter((p: any) =>
+              p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.diagnosis.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .slice(0, 5)
+            .map((p: any) => ({ type: "patient", data: p }))
+
+          const filteredReports = (Array.isArray(allReports) ? allReports : [])
+            .filter((r: any) =>
+              r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              r.type.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .slice(0, 5)
+            .map((r: any) => ({ type: "report", data: r }))
+
+          setSearchResults([...filteredPatients, ...filteredReports])
+          setShowResults(true)
+        } catch (error) {
+          console.error("Search fetch failed:", error)
+          setSearchResults([])
+        }
+      } else {
+        setSearchResults([])
+        setShowResults(false)
+      }
     }
+
+    const debounceTimer = setTimeout(fetchData, 300)
+    return () => clearTimeout(debounceTimer)
   }, [searchTerm])
 
   const handleResultClick = (result: any) => {
@@ -59,17 +74,20 @@ export function PageHeader({ title, description, showSearch = false }: PageHeade
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-          {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+        <div className="relative">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-1.5 flex items-center gap-3">
+            {title}
+            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse hidden sm:inline-block" />
+          </h1>
+          {description && <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{description}</p>}
         </div>
         {showSearch && (
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-full max-w-md group/search">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-500 transition-colors duration-300 z-10" />
             <Input
               type="search"
               placeholder="Search patients, diagnoses, reports..."
-              className="pl-10"
+              className="pl-11 pr-4 py-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-slate-200 dark:border-slate-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-md"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onBlur={() => setTimeout(() => setShowResults(false), 200)}
