@@ -186,13 +186,13 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <p className="text-base font-medium text-foreground">{patient.lastVisit}</p>
                   </div>
                   <Separator />
-                  <div>
+                  {/* <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Known Allergies</p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <Badge variant="destructive">Penicillin</Badge>
                       <Badge variant="destructive">NSAIDs</Badge>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             </div>
@@ -203,32 +203,32 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div>
+                  {/* <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Side Affected</p>
                     <p className="text-base font-medium text-foreground">{patient.laterality || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Severity</p>
                     <Badge variant="outline">{patient.severity || "Not specified"}</Badge>
-                  </div>
+                  </div> */}
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Date of Injury/Onset</p>
                     <p className="text-base font-medium text-foreground">{patient.injuryDate || "N/A"}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Surgery Status</p>
                     <Badge variant={patient.surgeryRequired ? "destructive" : "secondary"}>
                       {patient.surgeryRequired ? "Surgery Required" : "Conservative Treatment"}
                     </Badge>
-                  </div>
+                  </div> */}
                 </div>
-                <Separator />
-                <div>
+                {/* <Separator /> */}
+                {/* <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Physical Therapy</p>
                   <Badge variant={patient.physicalTherapy ? "default" : "secondary"}>
                     {patient.physicalTherapy ? "Active" : "Not scheduled"}
                   </Badge>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </TabsContent>

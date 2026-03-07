@@ -29,6 +29,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
     laterality: "",
     severity: "",
     reportType: "X-Ray",
+    otherReportType: "",
     reportFile: null as File | null,
   })
 
@@ -115,7 +116,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
         diagnosis: formData.diagnosis,
         doctor: formData.doctor,
         lastVisit: now.toISOString().split('T')[0],
-        reportType: formData.reportType,
+        reportType: formData.reportType === "Others" ? formData.otherReportType : formData.reportType,
         year: now.getFullYear().toString(),
         month: months[now.getMonth()],
         laterality: formData.laterality || "Right",
@@ -145,6 +146,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
           laterality: "",
           severity: "",
           reportType: "X-Ray",
+          otherReportType: "",
           reportFile: null,
         })
         setErrors({})
@@ -296,7 +298,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                     </Select>
                     {errors.doctor && <p className="text-[10px] font-bold text-destructive uppercase tracking-tight">{errors.doctor}</p>}
                   </div>
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="laterality" className="text-xs font-bold text-slate-700 dark:text-slate-300">Laterality</Label>
                     <Select value={formData.laterality || undefined} onValueChange={(v) => setFormData({ ...formData, laterality: v })}>
                       <SelectTrigger id="laterality" className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
@@ -321,7 +323,7 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                         <SelectItem value="Severe">Severe</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
@@ -341,9 +343,22 @@ export function AddPatientDialog({ children, onSuccess }: { children: React.Reac
                         <SelectItem value="MRI">MRI</SelectItem>
                         <SelectItem value="CT-Scan">CT-Scan</SelectItem>
                         <SelectItem value="Ultrasound">Ultrasound</SelectItem>
+                        <SelectItem value="Others">Others</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  {formData.reportType === "Others" && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <Label htmlFor="otherReportType" className="text-xs font-bold text-slate-700 dark:text-slate-300">Specify Report Type *</Label>
+                      <Input
+                        id="otherReportType"
+                        value={formData.otherReportType}
+                        onChange={(e) => setFormData({ ...formData, otherReportType: e.target.value })}
+                        placeholder="Enter report type (e.g. Blood Test)"
+                        className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="file" className="text-xs font-bold text-slate-700 dark:text-slate-300">Upload Report</Label>
                     <Input
