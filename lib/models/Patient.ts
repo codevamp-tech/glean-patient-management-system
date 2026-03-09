@@ -18,6 +18,8 @@ const PatientSchema = new mongoose.Schema(
         injuryDate: { type: String },
         surgeryRequired: { type: Boolean },
         physicalTherapy: { type: Boolean },
+        address: { type: String },
+        guardianName: { type: String },
         createdBy: { type: String },
     },
     { timestamps: true }

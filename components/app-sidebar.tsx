@@ -108,6 +108,12 @@ const navItems = [
     roles: ["ADMIN", "DOCTOR"],
   },
   {
+    title: "OPD",
+    href: "/opd",
+    icon: ClipboardList,
+    roles: ["STAFF"],
+  },
+  {
     title: "System Settings",
     href: "/settings",
     icon: Settings,
