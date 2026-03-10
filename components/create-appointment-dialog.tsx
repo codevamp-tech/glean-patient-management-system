@@ -215,7 +215,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-0">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader className="px-8 pt-8 pb-4 border-b border-slate-100 dark:border-slate-800">
           <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">Create New Appointment</DialogTitle>
         </DialogHeader>
@@ -231,7 +231,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
                   value={formData.patientName}
                   onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
                   placeholder="Enter or select name"
-                  className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                  className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
                 <datalist id="patient-names">
                   {patients.map(p => (
@@ -246,7 +246,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="Enter phone"
-                  className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                  className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -259,7 +259,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
           )}
 
           {isNewPatient && (
-            <div className="bg-blue-50/50 dark:bg-blue-500/5 p-5 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-4">
+            <div className="bg-blue-50/50 dark:bg-blue-500/5 p-5 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
               <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">New Patient Registration</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -269,7 +269,7 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
                     type="number"
                     value={formData.age}
                     onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                    className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                    className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div className="space-y-2">
@@ -338,11 +338,11 @@ export function CreateAppointmentDialog({ children, onSuccess, preselectedPatien
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date" className="text-xs font-bold text-slate-700 dark:text-slate-300">Date *</Label>
-                <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+                <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="time" className="text-xs font-bold text-slate-700 dark:text-slate-300">Time *</Label>
-                <Input id="time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+                <Input id="time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
             </div>
 

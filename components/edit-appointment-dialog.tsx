@@ -135,7 +135,7 @@ export function EditAppointmentDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-0">
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl p-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <DialogHeader className="px-8 pt-8 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">Edit Appointment <span className="text-sm font-bold text-slate-400 ml-2 uppercase tracking-widest">{appointment.id}</span></DialogTitle>
                 </DialogHeader>
@@ -202,11 +202,11 @@ export function EditAppointmentDialog({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="date" className="text-xs font-bold text-slate-700 dark:text-slate-300">Date *</Label>
-                                <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+                                <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="time" className="text-xs font-bold text-slate-700 dark:text-slate-300">Time *</Label>
-                                <Input id="time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800" />
+                                <Input id="time" type="time" value={formData.time} onChange={(e) => setFormData({ ...formData, time: e.target.value })} className="h-11 rounded-xl bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                             </div>
                         </div>
 
