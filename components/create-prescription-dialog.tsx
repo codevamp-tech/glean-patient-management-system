@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Search, Plus, Trash2, User } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Search, Plus, Trash2, User, History, Pill, Calendar as CalendarIcon } from "lucide-react"
 
 interface Patient {
   _id: string
@@ -40,6 +41,8 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loadingMetadata, setLoadingMetadata] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [previousPrescriptions, setPreviousPrescriptions] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   const [selectedPatientId, setSelectedPatientId] = useState("")
   const [selectedDoctorId, setSelectedDoctorId] = useState("")
@@ -49,6 +52,32 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
   const [status, setStatus] = useState("Active")
   const [duration, setDuration] = useState("")
   const [instructions, setInstructions] = useState("")
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      fetchPatientHistory(selectedPatientId)
+    } else {
+      setPreviousPrescriptions([])
+    }
+  }, [selectedPatientId])
+
+  const fetchPatientHistory = async (patientMongoId: string) => {
+    const patient = patients.find(p => p._id === patientMongoId)
+    if (!patient) return
+
+    setLoadingHistory(true)
+    try {
+      const res = await fetch(`/api/prescriptions?patientId=${patient.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setPreviousPrescriptions(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch patient history:", error)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -169,10 +198,10 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl h-[95vh] bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl border border-white/20 dark:border-slate-800/50 rounded-[2rem] shadow-2xl overflow-hidden p-0 animate-in fade-in zoom-in-95 duration-300">
+      <DialogContent className="max-w-2xl h-[95vh] bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-white/20 dark:border-slate-800/50 rounded-[2rem] shadow-2xl overflow-hidden p-0 animate-in fade-in zoom-in-95 duration-300">
         <DialogHeader className="px-8 pt-8 pb-4 bg-slate-500/5 border-b border-slate-200/50 dark:border-slate-800/50">
           <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white">Create New Prescription</DialogTitle>
-          <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1.5 px-0.5">Pharmacy Management System</p>
+          <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-1.5 px-0.5">Clinical Pharmacy Management</p>
         </DialogHeader>
 
         <div className="px-8 py-6 space-y-6 h-[calc(95vh-180px)] overflow-y-auto custom-scrollbar">
@@ -221,6 +250,54 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
               )}
             </div>
 
+            {/* Previous Prescriptions History */}
+            {selectedPatientId && (
+              <div className="space-y-4 p-6 rounded-3xl bg-blue-500/5 border border-blue-200/30 dark:border-blue-800/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <History className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Previous Medications</h3>
+                </div>
+
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  </div>
+                ) : previousPrescriptions.length > 0 ? (
+                  <div className="space-y-3 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                    {previousPrescriptions.map((rx) => (
+                      <div key={rx._id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                            <CalendarIcon className="h-3 w-3 text-slate-500" />
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{rx.issued}</span>
+                          </div>
+                          <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-wider h-6 rounded-full border-none ${rx.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                            {rx.status}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {rx.medications.map((m: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2.5 group">
+                              <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center mt-0.5">
+                                <Pill className="h-3 w-3 text-blue-600" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">{m.medication}</span>
+                                <span className="text-[10px] text-slate-500 font-medium">{m.dosage} • {m.quantity} Units</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] font-bold text-slate-400 text-center py-4 italic">No previous records found for this patient.</p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="flex items-center justify-between ml-1">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Medications List</Label>
@@ -229,18 +306,18 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                   variant="outline"
                   size="sm"
                   onClick={addMedication}
-                  className="rounded-full h-8 px-3 text-[10px] font-black uppercase tracking-widest border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                  className="rounded-full h-9 px-4 text-[10px] font-black uppercase tracking-widest border-blue-500/30 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all font-bold"
                 >
-                  <Plus className="h-3 w-3 mr-1" /> Add Medicine
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Medicine
                 </Button>
               </div>
 
               {medications.map((med, index) => (
-                <div key={index} className="p-5 rounded-3xl bg-slate-500/5 border border-slate-200/50 dark:border-slate-800/50 space-y-4 relative group">
+                <div key={index} className="p-5 rounded-3xl bg-slate-500/5 border border-slate-200/50 dark:border-slate-800/50 space-y-4 relative group hover:border-blue-500/20 transition-all">
                   {medications.length > 1 && (
                     <button
                       onClick={() => removeMedication(index)}
-                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:scale-110 active:scale-90"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -292,8 +369,8 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
-                    <SelectItem value="Active" className="rounded-xl py-2.5">Active</SelectItem>
-                    <SelectItem value="Filled" className="rounded-xl py-2.5">Filled</SelectItem>
+                    <SelectItem value="Active" className="rounded-xl py-2.5 font-bold">Active</SelectItem>
+                    <SelectItem value="Filled" className="rounded-xl py-2.5 font-bold">Filled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -304,10 +381,15 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                     <SelectValue placeholder="Select timeframe" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-800">
-                    <SelectItem value="1 week" className="rounded-xl py-2.5">1 Week</SelectItem>
-                    <SelectItem value="2 weeks" className="rounded-xl py-2.5">2 Weeks</SelectItem>
-                    <SelectItem value="1 month" className="rounded-xl py-2.5">1 Month</SelectItem>
-                    <SelectItem value="3 months" className="rounded-xl py-2.5">3 Months</SelectItem>
+                    <SelectItem value="1 days" className="rounded-xl py-2.5 font-bold">1 Days</SelectItem>
+                    <SelectItem value="2 days" className="rounded-xl py-2.5 font-bold">2 Days</SelectItem>
+                    <SelectItem value="3 days" className="rounded-xl py-2.5 font-bold">3 Days</SelectItem>
+                    <SelectItem value="5 days" className="rounded-xl py-2.5 font-bold">5 Days</SelectItem>
+                    <SelectItem value="1 week" className="rounded-xl py-2.5 font-bold">1 Week</SelectItem>
+                    <SelectItem value="2 weeks" className="rounded-xl py-2.5 font-bold">2 Weeks</SelectItem>
+                    <SelectItem value="3 weeks" className="rounded-xl py-2.5 font-bold">3 Weeks</SelectItem>
+                    <SelectItem value="1 month" className="rounded-xl py-2.5 font-bold">1 Month</SelectItem>
+                    <SelectItem value="3 months" className="rounded-xl py-2.5 font-bold">3 Months</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -320,20 +402,20 @@ export function CreatePrescriptionDialog({ children, onCreated, preselectedPatie
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Dosage warnings or specific clinical instructions..."
-                className="rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 min-h-[120px] resize-none shadow-sm transition-all hover:border-blue-500/50 p-4"
+                className="rounded-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-blue-500/20 min-h-[120px] resize-none shadow-sm transition-all hover:border-blue-500/50 p-4 font-semibold"
               />
             </div>
           </div>
         </div>
 
-        <div className="p-8 bg-slate-50 dark:bg-slate-900/80 flex gap-4 justify-end border-t border-slate-200 dark:border-slate-800 sticky bottom-0">
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/80 flex gap-4 justify-end border-t border-slate-200 dark:border-slate-800 sticky bottom-0">
           <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl px-6 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all">
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={loading || !selectedPatientId || !selectedDoctorId || medications.some(m => !m.medication || !m.dosage || !m.quantity)}
-            className="rounded-2xl px-10 h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.02] active:scale-[0.98] transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-slate-500/20 dark:shadow-none"
+            className="rounded-2xl px-8 h-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.02] active:scale-[0.98] transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-slate-500/20 dark:shadow-none"
           >
             {loading ? (
               <>

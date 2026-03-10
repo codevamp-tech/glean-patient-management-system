@@ -3,7 +3,7 @@ import dbConnect from "@/lib/dbConnect"
 import Prescription from "@/lib/models/Prescription"
 import { getAuthSession, hasRole } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const session = await getAuthSession()
         if (!session) {
@@ -12,8 +12,13 @@ export async function GET() {
 
         await dbConnect()
 
+        const { searchParams } = new URL(request.url)
+        const patientId = searchParams.get("patientId")
+
         let query: any = {}
-        if (session.role === "DOCTOR") {
+        if (patientId) {
+            query.patientId = patientId
+        } else if (session.role === "DOCTOR") {
             // Match by ID or Name for better flexibility
             query = {
                 $or: [

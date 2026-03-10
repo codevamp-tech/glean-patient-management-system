@@ -37,6 +37,7 @@ export default function OPDPage() {
 
     const [patients, setPatients] = useState<any[]>([])
     const [doctors, setDoctors] = useState<any[]>([])
+    const [specialties, setSpecialties] = useState<any[]>([])
     const [isSaving, setIsSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [openPatient, setOpenPatient] = useState(false)
@@ -72,14 +73,17 @@ export default function OPDPage() {
                     uhidNo: "" // Keep empty for new patient initially
                 }))
 
-                const [patientsRes, doctorsRes] = await Promise.all([
+                const [patientsRes, doctorsRes, specialtiesRes] = await Promise.all([
                     fetch("/api/patients"),
-                    fetch("/api/doctors")
+                    fetch("/api/doctors"),
+                    fetch("/api/specialties")
                 ])
                 const patientsData = await patientsRes.json()
                 const doctorsData = await doctorsRes.json()
+                const specialtiesData = await specialtiesRes.json()
                 setPatients(patientsData)
                 setDoctors(doctorsData)
+                setSpecialties(specialtiesData)
             } catch (error) {
                 console.error("Failed to fetch initial data:", error)
                 toast.error("Failed to load patient or doctor data")
@@ -125,22 +129,37 @@ export default function OPDPage() {
         try {
             setIsSaving(true)
 
+            const now = new Date()
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+            // Normalize mobile number for matching
+            const normalizedPhone = formData.mobileNo.replace(/^\+91\s?/, "").replace(/\D/g, "")
+
             // Check if patient exists, if not create one
             let finalUhid = formData.uhidNo
 
-            const existingPatient = patients.find((p: any) =>
-                p.name.toLowerCase() === formData.patientName.toLowerCase() &&
-                p.phone === formData.mobileNo
-            )
+            // Try to find patient by name and normalized phone
+            const existingPatient = patients.find((p: any) => {
+                const pPhone = p.phone?.replace(/^\+91\s?/, "").replace(/\D/g, "")
+                return p.name.toLowerCase() === formData.patientName.toLowerCase() && pPhone === normalizedPhone
+            })
+
+            // If a UHID was manually entered, check if it already exists to avoid duplication
+            if (finalUhid && !existingPatient) {
+                const manualMatch = patients.find(p => p.id === finalUhid)
+                if (manualMatch) {
+                    toast.info(`Using existing UHID: ${finalUhid}`)
+                }
+            }
 
             if (existingPatient) {
                 finalUhid = existingPatient.id
-            } else if (formData.patientName && formData.mobileNo) {
-                // Generate a NEW unique patient code for the new patient's UHID
+                toast.info(`Found existing patient: ${finalUhid}`)
+            } else if (!finalUhid) {
+                // Create a NEW unique patient code if no UHID and no match
                 const newPatientId = `P${Math.floor(1000 + Math.random() * 9000).toString()}`
                 finalUhid = newPatientId
 
-                const now = new Date()
                 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
                 const newPatientPayload = {
@@ -149,9 +168,9 @@ export default function OPDPage() {
                     age: parseInt(formData.ageSex.split('/')[0].trim()) || 0,
                     gender: formData.ageSex.split('/')[1]?.trim() || "Others",
                     phone: formData.mobileNo,
-                    diagnosis: "OPD Consultation", // Default
-                    doctor: formData.consultant || "Dr. Sharma", // Default
-                    lastVisit: now.toISOString().split('T')[0],
+                    diagnosis: "OPD Consultation",
+                    doctor: formData.consultant,
+                    lastVisit: today,
                     reportType: "OPD",
                     year: now.getFullYear().toString(),
                     month: months[now.getMonth()],
@@ -159,6 +178,7 @@ export default function OPDPage() {
                     guardianName: formData.guardianName,
                 }
 
+                console.log("Creating new patient:", newPatientPayload)
                 const pResponse = await fetch("/api/patients", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -167,27 +187,70 @@ export default function OPDPage() {
 
                 if (!pResponse.ok) {
                     const err = await pResponse.json()
-                    throw new Error(`Failed to create patient: ${err.error}`)
+                    throw new Error(err.error || "Failed to create patient record")
                 }
 
                 toast.success("New patient record created")
 
                 // Refetch patients to sync state
                 const patientsRes = await fetch("/api/patients")
-                const patientsData = await patientsRes.json()
-                setPatients(patientsData)
+                if (patientsRes.ok) {
+                    const patientsData = await patientsRes.json()
+                    setPatients(patientsData)
+                }
             }
 
+            // 2. Create OPD Registration
+            console.log("Creating OPD registration with UHID:", finalUhid)
             const response = await fetch("/api/opd", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
-                    uhidNo: finalUhid // Use the determined UHID
+                    uhidNo: finalUhid
                 })
             })
 
-            if (!response.ok) throw new Error("Failed to save data")
+            if (!response.ok) {
+                const err = await response.json()
+                throw new Error(err.error || "Failed to save OPD registration")
+            }
+
+            // 3. Automatically book appointment
+            try {
+                const selectedDoctor = doctors.find(d => d.name === formData.consultant)
+                const selectedSpecialty = specialties.find(s => s.id === selectedDoctor?.specialtyId)
+
+                const appointmentPayload = {
+                    id: `APT-${Math.floor(100000 + Math.random() * 900000)}`,
+                    patientName: formData.patientName,
+                    patientId: finalUhid,
+                    date: today,
+                    time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+                    doctor: formData.consultant,
+                    specialty: selectedSpecialty?.name || "General",
+                    type: "OPD",
+                    status: "Scheduled",
+                    phone: formData.mobileNo,
+                }
+
+                console.log("Booking appointment:", appointmentPayload)
+                const aptResponse = await fetch("/api/appointments", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(appointmentPayload)
+                })
+
+                if (aptResponse.ok) {
+                    toast.success("Appointment booked automatically")
+                } else {
+                    const aptErr = await aptResponse.json()
+                    console.error("Failed to book appointment:", aptErr)
+                    toast.error("OPD saved, but failed to book appointment automatically")
+                }
+            } catch (aptError) {
+                console.error("Error booking appointment:", aptError)
+            }
 
             toast.success("Registration saved successfully")
             setTimeout(() => window.print(), 500)

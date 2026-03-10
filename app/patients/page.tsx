@@ -130,7 +130,7 @@ export default function PatientsPage() {
               {/* Filters */}
               <div className="flex flex-wrap gap-2">
                 <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[180px]">
                     <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                     <SelectValue placeholder="Doctor" />
                   </SelectTrigger>

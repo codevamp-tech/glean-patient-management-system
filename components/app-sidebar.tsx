@@ -48,6 +48,12 @@ import { ChangePasswordDialog } from "@/components/change-password-dialog"
 
 const navItems = [
   {
+    title: "OPD",
+    href: "/opd",
+    icon: ClipboardList,
+    roles: ["STAFF", "ADMIN"],
+  },
+  {
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
@@ -107,12 +113,7 @@ const navItems = [
     icon: FileImage,
     roles: ["ADMIN", "DOCTOR"],
   },
-  {
-    title: "OPD",
-    href: "/opd",
-    icon: ClipboardList,
-    roles: ["STAFF", "ADMIN"],
-  },
+
   {
     title: "System Settings",
     href: "/settings",

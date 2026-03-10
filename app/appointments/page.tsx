@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Clock, Loader2 } from "lucide-react"
+import { Calendar, Clock, Loader2, RotateCcw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { EditAppointmentDialog } from "@/components/edit-appointment-dialog"
+import { CreatePrescriptionDialog } from "@/components/create-prescription-dialog"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 
 export default function AppointmentsPage() {
@@ -18,6 +20,9 @@ export default function AppointmentsPage() {
   const [doctors, setDoctors] = useState<any[]>([])
   const [filterDoctor, setFilterDoctor] = useState("all")
   const [filterMonth, setFilterMonth] = useState("all")
+  const [filterYear, setFilterYear] = useState("all")
+  const [filterDate, setFilterDate] = useState("")
+  const [activeTab, setActiveTab] = useState("today") // "all" | "today"
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
@@ -63,14 +68,26 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterDoctor, filterMonth])
+  }, [filterDoctor, filterMonth, filterYear, filterDate, activeTab])
 
   const filteredAppointments = appointments.filter(a => {
     let match = true
     if (filterDoctor !== "all" && a.doctor !== filterDoctor) match = false
+
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    if (activeTab === "today" && a.date !== today) match = false
+
+    if (filterDate && a.date !== filterDate) match = false
+
     if (filterMonth !== "all" && a.date) {
       const month = a.date.split("-")[1]
       if (month !== filterMonth) match = false
+    }
+
+    if (filterYear !== "all" && a.date) {
+      const year = a.date.split("-")[0]
+      if (year !== filterYear) match = false
     }
     return match
   })
@@ -144,6 +161,35 @@ export default function AppointmentsPage() {
           </Card>
         </div>
 
+        {/* Tabs for Filtering */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant={activeTab === "today" ? "default" : "outline"}
+            onClick={() => {
+              setActiveTab("today")
+              setFilterDate("")
+              setFilterMonth("all")
+              setFilterYear("all")
+            }}
+            className={cn(
+              "rounded-2xl px-6 font-bold transition-all",
+              activeTab === "today" ? "shadow-lg shadow-emerald-500/20" : "bg-white/50 dark:bg-slate-900/50"
+            )}
+          >
+            Today's Appointments
+          </Button>
+          <Button
+            variant={activeTab === "all" ? "default" : "outline"}
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "rounded-2xl px-6 font-bold transition-all",
+              activeTab === "all" ? "shadow-lg shadow-blue-500/20" : "bg-white/50 dark:bg-slate-900/50"
+            )}
+          >
+            All Appointments
+          </Button>
+        </div>
+
         {/* Appointments List */}
         <div className="glass-premium rounded-3xl p-8 hover:shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-6 duration-1000">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
@@ -151,11 +197,25 @@ export default function AppointmentsPage() {
               <h3 className="text-xl font-black text-slate-900 dark:text-white">Upcoming Appointments</h3>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chronological overview of scheduled visits</p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {user && (user.role === "ADMIN" || user.role === "STAFF") && (
-                <>
-                  <Select value={filterDoctor} onValueChange={setFilterDoctor}>
-                    <SelectTrigger className="w-[160px] bg-white/50 dark:bg-slate-900/50">
+            <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => {
+                      setFilterDate(e.target.value)
+                      if (e.target.value) setActiveTab("all")
+                    }}
+                    className="w-[160px] h-10 px-3 rounded-md border border-input bg-white/50 dark:bg-slate-900/50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                {user && (user.role === "ADMIN" || user.role === "STAFF") && (
+                  <Select value={filterDoctor} onValueChange={(val) => {
+                    setFilterDoctor(val)
+                    if (val !== "all") setActiveTab("all")
+                  }}>
+                    <SelectTrigger className="w-[150px] bg-white/50 dark:bg-slate-900/50">
                       <SelectValue placeholder="All Doctors" />
                     </SelectTrigger>
                     <SelectContent>
@@ -165,34 +225,70 @@ export default function AppointmentsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select value={filterMonth} onValueChange={setFilterMonth}>
-                    <SelectTrigger className="w-[140px] bg-white/50 dark:bg-slate-900/50">
-                      <SelectValue placeholder="All Months" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Months</SelectItem>
-                      <SelectItem value="01">January</SelectItem>
-                      <SelectItem value="02">February</SelectItem>
-                      <SelectItem value="03">March</SelectItem>
-                      <SelectItem value="04">April</SelectItem>
-                      <SelectItem value="05">May</SelectItem>
-                      <SelectItem value="06">June</SelectItem>
-                      <SelectItem value="07">July</SelectItem>
-                      <SelectItem value="08">August</SelectItem>
-                      <SelectItem value="09">September</SelectItem>
-                      <SelectItem value="10">October</SelectItem>
-                      <SelectItem value="11">November</SelectItem>
-                      <SelectItem value="12">December</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
+                )}
+                <Select value={filterMonth} onValueChange={(val) => {
+                  setFilterMonth(val)
+                  if (val !== "all") setActiveTab("all")
+                }}>
+                  <SelectTrigger className="w-[130px] bg-white/50 dark:bg-slate-900/50">
+                    <SelectValue placeholder="All Months" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    <SelectItem value="01">January</SelectItem>
+                    <SelectItem value="02">February</SelectItem>
+                    <SelectItem value="03">March</SelectItem>
+                    <SelectItem value="04">April</SelectItem>
+                    <SelectItem value="05">May</SelectItem>
+                    <SelectItem value="06">June</SelectItem>
+                    <SelectItem value="07">July</SelectItem>
+                    <SelectItem value="08">August</SelectItem>
+                    <SelectItem value="09">September</SelectItem>
+                    <SelectItem value="10">October</SelectItem>
+                    <SelectItem value="11">November</SelectItem>
+                    <SelectItem value="12">December</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterYear} onValueChange={(val) => {
+                  setFilterYear(val)
+                  if (val !== "all") setActiveTab("all")
+                }}>
+                  <SelectTrigger className="w-[110px] bg-white/50 dark:bg-slate-900/50">
+                    <SelectValue placeholder="All Years" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(filterDate || filterDoctor !== "all" || filterMonth !== "all" || filterYear !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setFilterDate("")
+                      setFilterDoctor("all")
+                      setFilterMonth("all")
+                      setFilterYear("all")
+                      setActiveTab("today")
+                    }}
+                    className="h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    title="Reset Filters"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {user && (user.role === "ADMIN" || user.role === "STAFF") && (
+                <CreateAppointmentDialog onSuccess={fetchAppointments}>
+                  <Button className="rounded-xl px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 transition-transform whitespace-nowrap h-10">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Create Appointment
+                  </Button>
+                </CreateAppointmentDialog>
               )}
-              <CreateAppointmentDialog onSuccess={fetchAppointments}>
-                <Button className="rounded-xl px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 transition-transform">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Create Appointment
-                </Button>
-              </CreateAppointmentDialog>
             </div>
           </div>
 
@@ -272,11 +368,20 @@ export default function AppointmentsPage() {
                             </Select>
                           </TableCell>
                           <TableCell className="text-right py-4">
-                            <EditAppointmentDialog appointment={apt} onSuccess={fetchAppointments}>
-                              <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all font-bold text-xs uppercase tracking-widest">
-                                Edit
-                              </Button>
-                            </EditAppointmentDialog>
+                            <div className="flex items-center justify-end gap-2">
+                              {user && user.role !== "STAFF" && (
+                                <CreatePrescriptionDialog preselectedPatientId={apt.patientId}>
+                                  <Button variant="outline" size="sm" className="h-8 px-3 rounded-lg border-blue-200 dark:border-blue-800 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold text-xs uppercase tracking-widest">
+                                    Prescribe
+                                  </Button>
+                                </CreatePrescriptionDialog>
+                              )}
+                              <EditAppointmentDialog appointment={apt} onSuccess={fetchAppointments}>
+                                <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all font-bold text-xs uppercase tracking-widest">
+                                  Edit
+                                </Button>
+                              </EditAppointmentDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
