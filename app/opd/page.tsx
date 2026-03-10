@@ -404,15 +404,15 @@ export default function OPDPage() {
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
                                 <span className="text-[9.5pt] font-black w-[27mm]">UHID No.</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.uhidNo}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.uhidNo}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[22mm]">Date</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.date}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.date}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[24mm]">Token No.</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.tokenNo}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.tokenNo}</span>
                             </div>
                         </div>
 
@@ -420,15 +420,15 @@ export default function OPDPage() {
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
                                 <span className="text-[9.5pt] font-black w-[27mm]">Patient Name</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.patientName}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.patientName}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[22mm]">Age / Sex</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.ageSex}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.ageSex}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[24mm]">OPD No.</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.opdNo}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.opdNo}</span>
                             </div>
                         </div>
 
@@ -436,15 +436,15 @@ export default function OPDPage() {
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
                                 <span className="text-[9.5pt] font-black w-[27mm]">Guardian Name</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.guardianName}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.guardianName}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[22mm]">Mobile No.</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.mobileNo}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.mobileNo}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[24mm]">Valid Upto</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.validUpto}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.validUpto}</span>
                             </div>
                         </div>
 
@@ -452,11 +452,11 @@ export default function OPDPage() {
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
                                 <span className="text-[9.5pt] font-black w-[28mm]">Consultant</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.consultant}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.consultant}</span>
                             </div>
                             <div className="col-span-8 flex items-baseline ml-12">
                                 <span className="text-[9.5pt] font-black w-[22mm]">Address</span>
-                                <span className="text-[9.5pt] font-medium text-wrap">: {formData.address}</span>
+                                <span className="text-[9.5pt] font-black text-wrap">: {formData.address}</span>
                             </div>
                         </div>
 
@@ -464,7 +464,7 @@ export default function OPDPage() {
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-12 flex items-baseline">
                                 <span className="text-[9.5pt] font-black w-[27mm]">Patient Type</span>
-                                <span className="text-[9.5pt] font-medium">: {formData.patientType}</span>
+                                <span className="text-[9.5pt] font-black">: {formData.patientType}</span>
                             </div>
                         </div>
                     </div>
