@@ -111,7 +111,7 @@ const navItems = [
     title: "OPD",
     href: "/opd",
     icon: ClipboardList,
-    roles: ["STAFF"],
+    roles: ["STAFF", "ADMIN"],
   },
   {
     title: "System Settings",
