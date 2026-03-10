@@ -403,68 +403,68 @@ export default function OPDPage() {
                         {/* Row 1 */}
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
-                                <span className="text-[9.5pt] font-bold w-[27mm]">UHID No.</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.uhidNo}</span>
+                                <span className="text-[9.5pt] font-black w-[27mm]">UHID No.</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.uhidNo}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[22mm]">Date</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.date}</span>
+                                <span className="text-[9.5pt] font-black w-[22mm]">Date</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.date}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[24mm]">Token No.</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.tokenNo}</span>
+                                <span className="text-[9.5pt] font-black w-[24mm]">Token No.</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.tokenNo}</span>
                             </div>
                         </div>
 
                         {/* Row 2 */}
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
-                                <span className="text-[9.5pt] font-bold w-[27mm]">Patient Name</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.patientName}</span>
+                                <span className="text-[9.5pt] font-black w-[27mm]">Patient Name</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.patientName}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[22mm]">Age / Sex</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.ageSex}</span>
+                                <span className="text-[9.5pt] font-black w-[22mm]">Age / Sex</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.ageSex}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[24mm]">OPD No.</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.opdNo}</span>
+                                <span className="text-[9.5pt] font-black w-[24mm]">OPD No.</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.opdNo}</span>
                             </div>
                         </div>
 
                         {/* Row 3 */}
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
-                                <span className="text-[9.5pt] font-bold w-[27mm]">Guardian Name</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.guardianName}</span>
+                                <span className="text-[9.5pt] font-black w-[27mm]">Guardian Name</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.guardianName}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[22mm]">Mobile No.</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.mobileNo}</span>
+                                <span className="text-[9.5pt] font-black w-[22mm]">Mobile No.</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.mobileNo}</span>
                             </div>
                             <div className="col-span-4 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[24mm]">Valid Upto</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.validUpto}</span>
+                                <span className="text-[9.5pt] font-black w-[24mm]">Valid Upto</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.validUpto}</span>
                             </div>
                         </div>
 
                         {/* Row 4 */}
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-4 flex items-baseline">
-                                <span className="text-[9.5pt] font-bold w-[28mm]">Consultant</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.consultant}</span>
+                                <span className="text-[9.5pt] font-black w-[28mm]">Consultant</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.consultant}</span>
                             </div>
                             <div className="col-span-8 flex items-baseline ml-12">
-                                <span className="text-[9.5pt] font-bold w-[22mm]">Address</span>
-                                <span className="text-[9.5pt] font-bold text-wrap">: {formData.address}</span>
+                                <span className="text-[9.5pt] font-black w-[22mm]">Address</span>
+                                <span className="text-[9.5pt] font-medium text-wrap">: {formData.address}</span>
                             </div>
                         </div>
 
                         {/* Row 5 */}
                         <div className="grid grid-cols-12 leading-relaxed">
                             <div className="col-span-12 flex items-baseline">
-                                <span className="text-[9.5pt] font-bold w-[27mm]">Patient Type</span>
-                                <span className="text-[9.5pt] font-bold">: {formData.patientType}</span>
+                                <span className="text-[9.5pt] font-black w-[27mm]">Patient Type</span>
+                                <span className="text-[9.5pt] font-medium">: {formData.patientType}</span>
                             </div>
                         </div>
                     </div>
@@ -491,7 +491,6 @@ export default function OPDPage() {
                         width: 210mm; /* A4 width */
                         font-family: 'Courier New', Courier, monospace; /* Monospaced for reliable alignment */
                         font-size: 11pt;
-                        font-weight: bold;
                         color: black !important;
                     }
                     .print-container {
